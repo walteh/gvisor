@@ -25,6 +25,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -70,12 +71,15 @@ var controllers = map[string]controller{
 
 // IsOnlyV2 checks whether cgroups V2 is enabled and V1 is not.
 func IsOnlyV2() bool {
+	if runtime.GOOS == "darwin" {
+		return false
+	}
 	var stat unix.Statfs_t
 	if err := unix.Statfs(cgroupRoot, &stat); err != nil {
 		// It's not used for anything important, assume not V2 on failure.
 		return false
 	}
-	return stat.Type == unix.CGROUP2_SUPER_MAGIC
+	return stat.Type == CGROUP2_SUPER_MAGIC
 }
 
 func setOptionalValueInt(path, name string, val *int64) error {
@@ -389,6 +393,10 @@ func TransformSystemdPath(path, cid string, rootless bool) (string, error) {
 }
 
 func new(pid, cgroupsPath string, useSystemd bool) (Cgroup, error) {
+	// if darwin, return a darwinCgroup
+	if runtime.GOOS == "darwin" {
+		return &noopCgroup{}, nil
+	}
 	var (
 		parents map[string]string
 		err     error
