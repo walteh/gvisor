@@ -209,13 +209,15 @@ func NewFromFiles(files []*os.File) ([]*FD, error) {
 	return rv, nil
 }
 
-// Open is equivalent to open(2).
-func Open(path string, openmode int, perm uint32) (*FD, error) {
-	f, err := unix.Open(path, openmode|unix.O_LARGEFILE, perm)
+// Open opens the file at path with the specified mode and permissions.
+// If successful, a file descriptor is returned.
+func Open(path string, openmode int, perm uint32) (int, error) {
+	// O_LARGEFILE is defined as 0 on non-Linux systems (see fd_nonlinux.go).
+	f, err := unix.Open(path, openmode|O_LARGEFILE, perm)
 	if err != nil {
-		return nil, err
+		return -1, fmt.Errorf("error opening %q: %w", path, err)
 	}
-	return New(f), nil
+	return f, nil
 }
 
 // OpenAt is equivalent to openat(2).
