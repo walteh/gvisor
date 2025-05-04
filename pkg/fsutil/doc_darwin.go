@@ -2,23 +2,35 @@
 
 package fsutil
 
-// Darwin Plan:
-// This package currently fails to build on Darwin due to:
-// 1. Missing Linux-specific syscall: unix.Getdents.
-//    Darwin uses getdents64 or getdirentries64.
-// 2. Missing Linux-specific syscall: unix.SYS_UTIMENSAT.
-//    Darwin uses utimensat (check x/sys/unix for availability).
-// 3. Accessing unix.Dirent.Off field, which may not exist or be correct
-//    for Darwin's directory entry structure.
+// --- Darwin Porting Status ---
 //
-// Required Changes:
-// 1. Replace unix.Getdents with the appropriate Darwin equivalent,
-//    likely unix.Getdirentries or unix.Getdents64 from x/sys/unix,
-//    adjusting for any differences in the Dirent structure and handling.
-// 2. Replace direct use of unix.SYS_UTIMENSAT with unix.UtimesNanoAt or
-//    similar cross-platform functions if possible. If direct syscall is
-//    needed, use the correct Darwin syscall number for utimensat.
-// 3. Verify the structure of unix.Dirent when built for Darwin and access
-//    fields accordingly, potentially avoiding the Offset field if problematic.
-// 4. Use build tags (_linux.go/_darwin.go or runtime.GOOS checks) to
-//    conditionalize the implementations.
+// PROBLEM:
+//   Uses Linux-specific directory reading (Getdents) and time setting
+//   (SYS_UTIMENSAT) syscalls, and potentially incompatible Dirent structure access.
+//
+// LINUX_SPECIFIC:
+//   - unix.Getdents (syscall)
+//   - unix.SYS_UTIMENSAT (syscall number)
+//   - Access to unix.Dirent.Off (offset field might differ/not exist)
+//
+// DARWIN_EQUIVALENT:
+//   - unix.Getdirentries / getdents64 (syscalls for reading directories)
+//   - unix.UtimesNanoAt / utimensat syscall
+//   - Darwin's specific unix.Dirent structure
+//
+// REQUIRED_ACTION:
+//   1. [IMPLEMENT]: Create `fsutil_darwin.go`. Implement directory reading
+//      using `unix.Getdirentries` and handle the Darwin `unix.Dirent` struct carefully.
+//   2. [REFACTOR/SYSCALL]: Modify time setting logic. Prefer `unix.UtimesNanoAt`.
+//      If direct syscall needed, use build tags and Darwin's `utimensat` number.
+//   3. [BUILD_TAG]: Add `//go:build linux` to original files (`fsutil.go`,
+//      `fsutil_unsafe.go`) if they become Linux-only after refactoring.
+//
+// IMPACT_IF_STUBBED:
+//   Directory listing and setting file timestamps would fail.
+//
+// PRIORITY:
+//   - CRITICAL (Essential for filesystem operations).
+//   - BLOCKER (as it currently fails the build).
+//
+// --- End Darwin Porting Status ---

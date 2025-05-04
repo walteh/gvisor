@@ -2,16 +2,33 @@
 
 package eventfd
 
-// Darwin Plan:
-// This package currently fails to build on Darwin due to:
-// 1. Missing Linux-specific syscall: unix.SYS_EVENTFD2.
-//    Darwin uses kqueue for event notification, not eventfd.
-// 2. Undefined function call: rawfile.BlockingRead.
-//    This likely needs a Darwin implementation in pkg/rawfile.
+// --- Darwin Porting Status ---
 //
-// Required Changes:
-// 1. Implement the event notification functionality using Darwin's kqueue mechanism.
-//    This will likely require a significant rewrite of the package logic for Darwin
-//    and potentially defining a Darwin-specific implementation of the interfaces.
-// 2. Ensure pkg/rawfile has the necessary functions implemented for Darwin,
-//    including BlockingRead or its equivalent.
+// PROBLEM:
+//   Relies on Linux-specific eventfd mechanism and potentially unported
+//   rawfile functions.
+//
+// LINUX_SPECIFIC:
+//   - unix.SYS_EVENTFD2 (syscall for eventfd)
+//   - rawfile.BlockingRead (used internally, definition might be Linux-only)
+//
+// DARWIN_EQUIVALENT:
+//   - kqueue (for general event notification)
+//   - pipe + kqueue (can simulate eventfd signaling)
+//
+// REQUIRED_ACTION:
+//   1. [IMPLEMENT]: Create `eventfd_darwin.go`. Implement the eventfd functionality
+//      (likely the `Notifier` interface) using a Darwin mechanism like pipes and kqueue.
+//   2. [DEPENDENCY]: Ensure `pkg/rawfile.BlockingRead` is implemented in
+//      `pkg/rawfile/rawfile_darwin.go`.
+//   3. [BUILD_TAG]: Add `//go:build linux` to `eventfd.go` (if it becomes Linux-only).
+//
+// IMPACT_IF_STUBBED:
+//   Any Sentry component relying on eventfd for notifications (e.g., virtio)
+//   will likely hang or malfunction.
+//
+// PRIORITY:
+//   - CRITICAL (if used by core components like virtio or host networking).
+//   - BLOCKER (as it currently fails the build).
+//
+// --- End Darwin Porting Status ---

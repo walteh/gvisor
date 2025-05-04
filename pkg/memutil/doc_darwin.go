@@ -2,20 +2,31 @@
 
 package memutil
 
-// Darwin Plan:
-// This package currently fails to build on Darwin because other packages
-// (like pkg/sentry/usage) call memutil.CreateMemFD, which wraps the
-// Linux-specific memfd_create(2) syscall.
+// --- Darwin Porting Status ---
 //
-// Required Changes:
-// 1. Provide a Darwin implementation or stub for CreateMemFD.
-// 2. Darwin does not have a direct equivalent to memfd_create.
-//    Potential alternatives depending on the exact use case:
-//    a) Use standard anonymous memory mapping (unix.Mmap with MAP_ANON).
-//    b) Use POSIX shared memory (shm_open / shm_unlink) if a name/identifier
-//       is acceptable.
-//    c) Use a temporary file on disk if persistence isn't a major concern
-//       and performance is acceptable.
-// 3. The choice depends on how CreateMemFD is used by callers - specifically
-//    whether they rely on the ability to get a file descriptor referring to
-//    anonymous memory.
+// PROBLEM:
+//   Uses Linux-specific memfd_create(2) syscall via CreateMemFD function.
+//
+// LINUX_SPECIFIC:
+//   - memfd_create(2) syscall.
+//   - `memutil.CreateMemFD` function wrapping the syscall.
+//
+// DARWIN_EQUIVALENT:
+//   - N/A for anonymous memory file descriptor.
+//   - Alternatives: Anonymous mmap, POSIX shm_open, temporary files.
+//
+// REQUIRED_ACTION:
+//   1. [STUB]: Create `memutil_darwin.go` with a stub for `CreateMemFD`
+//      returning `unix.EOPNOTSUPP`.
+//   2. [BUILD_TAG]: Add `//go:build linux` to the file defining `CreateMemFD`
+//      for Linux (likely `memutil_linux.go` or `memutil.go`).
+//
+// IMPACT_IF_STUBBED:
+//   Code relying on creating anonymous memory FDs (e.g., `pkg/sentry/usage`)
+//   will fail at runtime.
+//
+// PRIORITY:
+//   - IMPORTANT (If needed for memory accounting or other core features).
+//   - BLOCKER (as it currently fails the build).
+//
+// --- End Darwin Porting Status ---

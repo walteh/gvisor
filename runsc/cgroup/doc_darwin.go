@@ -2,21 +2,42 @@
 
 package cgroup
 
-// Darwin Plan:
-// This package currently fails to build on Darwin because it uses the
-// Linux-specific constant unix.CGROUP2_SUPER_MAGIC.
+// --- Darwin Porting Status ---
 //
-// Cgroups (Control Groups) are a Linux kernel feature for resource limiting
-// and management.
+// PROBLEM:
+//   1. Uses Linux-specific cgroup constants (unix.CGROUP2_SUPER_MAGIC).
+//   2. Relies entirely on the Linux cgroup filesystem structure and files for
+//      resource control.
+//   3. Type definitions required by stub function signatures (Cgroup, controller
+//      interfaces, etc.) are in Linux-only files (cgroup.go, cgroup_v2.go).
 //
-// Required Changes:
-// 1. Darwin does not use cgroups. Resource limiting is typically handled
-//    via setrlimit, POSIX APIs, or potentially macOS-specific frameworks.
-// 2. Provide stub implementations for cgroup-related functions on Darwin.
-//    These stubs should likely do nothing and return success, effectively
-//    disabling cgroup functionality on Darwin.
-// 3. Guard uses of Linux-specific constants like CGROUP2_SUPER_MAGIC
-//    using build tags or runtime checks.
-// 4. This means that resource limits configured via cgroups in the OCI spec
-//    will likely be ignored when running on the VF platform initially.
-//    Mapping OCI resource limits to Darwin mechanisms is a future task.
+// LINUX_SPECIFIC:
+//   - Cgroups v1 & v2 filesystem layout (/sys/fs/cgroup/...)
+//   - unix.CGROUP2_SUPER_MAGIC
+//   - All controller logic files (cpu.go, memory.go, etc.)
+//
+// DARWIN_EQUIVALENT:
+//   - N/A for cgroups.
+//   - Resource limits set via `setrlimit(2)`.
+//   - Potential process properties via `sysctl`.
+//
+// REQUIRED_ACTION:
+//   1. [MOVE_TYPE]: Relocate common interfaces/types (`Cgroup` interface,
+//      potentially `controller` interface, helper structs/funcs if needed by
+//      stubs or future impl) from Linux files to `cgroup_defs.go`.
+//   2. [STUB]: Create `cgroup_darwin.go` with `darwinCgroup` struct implementing
+//      `Cgroup` with no-op/error methods (returning `unix.EOPNOTSUPP` for getters).
+//      Define `CGROUP2_SUPER_MAGIC=0`, implement `IsOnlyV2` returning false.
+//      Implement `NewFromPath`, `NewFromPid` returning the stub.
+//   3. [BUILD_TAG]: Add `//go:build linux` to `cgroup.go`, `cgroup_v2.go`, etc.
+//      AFTER types are moved.
+//
+// IMPACT_IF_STUBBED:
+//   All cgroup-based resource limiting specified in OCI spec is ignored.
+//   Runsc may fail later if it strictly expects cgroups to be functional.
+//
+// PRIORITY:
+//   - IMPORTANT (Resource limiting is a key container feature).
+//   - BLOCKER (Due to type definition issues causing build failures).
+//
+// --- End Darwin Porting Status ---

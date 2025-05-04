@@ -2,21 +2,38 @@
 
 package hostfd
 
-// Darwin Plan:
-// This package currently fails to build on Darwin due to:
-// 1. Missing Linux-specific syscall constants:
-//    - unix.SYS_PREAD64
-//    - unix.SYS_PREADV2
-//    - unix.SYS_PWRITE64
-//    - unix.SYS_PWRITEV2
-// 2. Undefined constant: MaxReadWriteIov.
-//    This is likely a Linux-specific limit for iovec arrays.
+// --- Darwin Porting Status ---
 //
-// Required Changes:
-// 1. Similar to pkg/aio, use standard Go functions (unix.Pread, Pwrite,
-//    Preadv, Pwritev) if possible.
-// 2. If direct syscalls are needed, conditionalize using build tags or runtime
-//    checks and use the correct Darwin syscall numbers.
-// 3. Define an appropriate MaxReadWriteIov constant for Darwin, potentially
-//    using unix.IOV_MAX or deriving it from system limits if necessary.
-//    Place this definition in a darwin-specific file or use build tags.
+// PROBLEM:
+//   Uses Linux-specific syscall numbers (pread64, etc.) and assumes Linux
+//   limits (MaxReadWriteIov).
+//
+// LINUX_SPECIFIC:
+//   - unix.SYS_PREAD64
+//   - unix.SYS_PREADV2
+//   - unix.SYS_PWRITE64
+//   - unix.SYS_PWRITEV2
+//   - MaxReadWriteIov (Linux constant for iovec array limits)
+//
+// DARWIN_EQUIVALENT:
+//   - Standard POSIX pread/pwrite/preadv/pwritev (via C library or direct syscalls
+//     with different numbers).
+//   - unix.IOV_MAX (standard constant for iovec array limits).
+//
+// REQUIRED_ACTION:
+//   1. [REFACTOR]: Modify hostfd.go/hostfd_unsafe.go to use `unix.Pread`, `unix.Pwrite`,
+//      `unix.Preadv`, `unix.Pwritev` if possible.
+//   2. [ALTERNATIVE_SYSCALL]: If direct syscalls are needed, use build tags and provide
+//      Darwin syscall numbers in `hostfd_darwin.go`.
+//   3. [DEFINE_CONST]: Define `MaxReadWriteIov = unix.IOV_MAX` in `hostfd_darwin.go`
+//      (or potentially a common `hostfd_defs.go` if needed by Linux too).
+//      Add `//go:build linux` to the file defining the Linux value if different.
+//
+// IMPACT_IF_STUBBED:
+//   Direct host file descriptor operations (pread/pwrite) would fail.
+//
+// PRIORITY:
+//   - CRITICAL (Likely needed for basic file system operations via gofers).
+//   - BLOCKER (as it currently fails the build).
+//
+// --- End Darwin Porting Status ---
