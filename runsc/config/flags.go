@@ -89,7 +89,7 @@ func RegisterFlags(flagSet *flag.FlagSet) {
 	flagSet.Bool("strace-event", false, "send strace to event.")
 
 	// Flags that control sandbox runtime behavior.
-	flagSet.String("platform", "systrap", "specifies which platform to use: systrap (default), ptrace, kvm.")
+	flagSet.String("platform", "systrap", "specifies which platform to use. on linux: systrap (default), ptrace, kvm. on darwin: only vf is supported.")
 	flagSet.String("platform_device_path", "", "path to a platform-specific device file (e.g. /dev/kvm for KVM platform). If unset, will use a sane platform-specific default.")
 	flagSet.Var(watchdogActionPtr(watchdog.LogWarning), "watchdog-action", "sets what action the watchdog takes when triggered: log (default), panic.")
 	flagSet.Int("panic-signal", -1, "register signal handling that panics. Usually set to SIGUSR2(12) to troubleshoot hangs. -1 disables it.")

@@ -1,3 +1,5 @@
+//go:build !darwin
+
 // Copyright 2021 The gVisor Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,10 +17,29 @@
 package eventfd
 
 import (
+	"fmt"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
+
+// Create returns an initialized eventfd.
+func Create() (Eventfd, error) {
+	fd, _, err := unix.RawSyscall(unix.SYS_EVENTFD2, 0, 0, 0)
+	if err != 0 {
+		return Eventfd{}, fmt.Errorf("failed to create eventfd: %v", error(err))
+	}
+	if err := unix.SetNonblock(int(fd), true); err != nil {
+		unix.Close(int(fd))
+		return Eventfd{}, err
+	}
+	return Eventfd{int(fd)}, nil
+}
+
+// Close closes the eventfd, after which it should not be used.
+func (ev Eventfd) Close() error {
+	return unix.Close(ev.fd)
+}
 
 // nonBlockingWrite writes the given buffer to a file descriptor. It fails if
 // partial data is written.

@@ -16,6 +16,7 @@ package fsutil
 
 import (
 	"fmt"
+	"runtime"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -199,14 +200,16 @@ func (f *PreciseHostFileMapper) mapInternalGap(fr *memmap.FileRange, gap mapping
 		errno unix.Errno
 	)
 	if f.addrMustEqualFileOffset {
-		addr, _, errno = unix.Syscall6(
-			unix.SYS_MMAP,
-			uintptr(newRange.Start),
-			uintptr(newRange.Length()),
-			uintptr(prot),
-			unix.MAP_SHARED|unix.MAP_FIXED_NOREPLACE,
-			uintptr(fd),
-			uintptr(newRange.Start))
+		if runtime.GOOS != "darwin" {
+			addr, _, errno = unix.Syscall6(
+				unix.SYS_MMAP,
+				uintptr(newRange.Start),
+				uintptr(newRange.Length()),
+				uintptr(prot),
+				unix.MAP_SHARED|MAP_FIXED_NOREPLACE,
+				uintptr(fd),
+				uintptr(newRange.Start))
+		}
 		if errno == 0 && uint64(addr) != newRange.Start {
 			// The host kernel predates MAP_FIXED_NOREPLACE and the requested
 			// address would conflict with an existing mapping. Return EEXIST

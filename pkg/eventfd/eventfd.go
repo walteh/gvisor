@@ -31,27 +31,9 @@ type Eventfd struct {
 	fd int
 }
 
-// Create returns an initialized eventfd.
-func Create() (Eventfd, error) {
-	fd, _, err := unix.RawSyscall(unix.SYS_EVENTFD2, 0, 0, 0)
-	if err != 0 {
-		return Eventfd{}, fmt.Errorf("failed to create eventfd: %v", error(err))
-	}
-	if err := unix.SetNonblock(int(fd), true); err != nil {
-		unix.Close(int(fd))
-		return Eventfd{}, err
-	}
-	return Eventfd{int(fd)}, nil
-}
-
 // Wrap returns an initialized Eventfd using the provided fd.
 func Wrap(fd int) Eventfd {
 	return Eventfd{fd}
-}
-
-// Close closes the eventfd, after which it should not be used.
-func (ev Eventfd) Close() error {
-	return unix.Close(ev.fd)
 }
 
 // Dup copies the eventfd, calling dup(2) on the underlying file descriptor.

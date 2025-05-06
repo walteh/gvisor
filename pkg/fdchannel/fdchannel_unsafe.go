@@ -33,7 +33,19 @@ const sizeofInt32 = int(unsafe.Sizeof(int32(0)))
 // representing connected sockets that may be passed to separate calls to
 // NewEndpoint to create connected Endpoints.
 func NewConnectedSockets() ([2]int, error) {
-	return unix.Socketpair(unix.AF_UNIX, unix.SOCK_SEQPACKET|unix.SOCK_CLOEXEC, 0)
+	fds, err := unix.Socketpair(unix.AF_UNIX, unix.SOCK_SEQPACKET|SOCK_CLOEXEC, 0)
+	if err != nil {
+		return [2]int{}, err
+	}
+
+	err = manualSetCloexec(fds)
+	if err != nil {
+		unix.Close(fds[1])
+		unix.Close(fds[0])
+		return [2]int{}, err
+	}
+
+	return fds, nil
 }
 
 // Endpoint sends file descriptors to, and receives them from, another
