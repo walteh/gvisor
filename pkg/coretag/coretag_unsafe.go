@@ -1,3 +1,6 @@
+//go:build linux && !go1.19
+// +build linux,!go1.19
+
 // Copyright 2022 The gVisor Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
